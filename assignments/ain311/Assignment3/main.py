@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import LabelEncoder
 
+
 def preprocess_data(image_files, df):
     x = []
     y = []
@@ -24,49 +25,68 @@ def preprocess_data(image_files, df):
 
 
 class NN:
-    def __init__(self, input_size=238700, hidden_size=10000, output_size=6):
-        self.W1 = np.random.randn(hidden_size, input_size) * 0.01
-        self.b1 = np.zeros((hidden_size, 1))
-        self.W2 = np.random.randn(output_size, hidden_size) * 0.01
-        self.b2 = np.zeros((output_size, 1))
-        self.learning_rate = 0.01
-        self.A1 = None
-        self.A2 = None
+    def __init__(self, input_size=238700, hidden_size=50, output_size=6, hidden_layer_count=3):
+        self.dZs = []
+        self.W = [np.random.randn(input_size, hidden_size) * 0.01]
+        self.dW = []
+        self.B = [np.zeros((hidden_size, 1))]
+        self.dB = []
+        for i in range(1, hidden_layer_count - 1):
+            self.W.append(np.random.randn(hidden_size, hidden_size) * 0.01)
+            self.B.append(np.zeros((hidden_size, 1)))
+
+        self.W.append(np.random.randn(hidden_size, output_size) * 0.01)
+        self.B.append(np.zeros((output_size, 1)))
+        self.learning_rate = 0.02
+        self.Z = []
 
     def forward(self, X):
-        Z1 = np.dot(self.W1, X) + self.b1
-        self.A1 = self.sigmoid(Z1)
-        Z2 = np.dot(self.W2, self.A1) + self.b2
-        self.A2 = self.sigmoid(Z2)
+        self.Z = []
+        input_ = X
+        for i in range(len(self.W)):
+            Z1 = np.dot(self.W[i].T, input_) + self.B[i]
+            input_ = self.sigmoid(Z1)
+            self.Z.append(input_)
 
     def sigmoid(self, X):
         return 1 / (1 + np.exp(-X))
 
     def backward_propagation(self, X, Y):
         m = X.shape[1]
+        self.dZs = []
+        self.dW = []
+        self.dB = []
+        dA = (self.Z[-1] - Y) / m
 
-        dZ2 = self.A2 - Y
-        dW2 = np.dot(dZ2, self.A1.T) / m
-        db2 = np.sum(dZ2, axis=1, keepdims=True) / m
+        for i in range(len(self.W) - 1, -1, -1):
+            dZ = dA
 
-        dZ1 = np.dot(self.W2.T, dZ2) * self.A1 * (1 - self.A1)
-        dW1 = np.dot(dZ1, X) / m
-        db1 = np.sum(dZ1, axis=1, keepdims=True) / m
-        self.update_parameters(dW1, db1, dW2, db2)
+            if i == 0:
+                dW = np.dot(dZ, X)
+            else:
+                dW = np.dot(dZ, self.Z[i - 1].T)
 
-    def update_parameters(self, dW1, db1, dW2, db2):
-        self.W1 -= self.learning_rate * dW1
-        self.b1 -= self.learning_rate * db1
-        self.W2 -= self.learning_rate * dW2
-        self.b2 -= self.learning_rate * db2
+            dB = np.sum(dZ, axis=1, keepdims=True)
+
+            self.dZs.insert(0, dZ)
+            self.dW.insert(0, dW)
+            self.dB.insert(0, dB)
+
+            dA = np.dot(self.W[i], dZ)
+
+    def update_parameters(self):
+        for i in range(len(self.W)):
+            self.W[i] -= self.learning_rate * self.dW[i].T
+            self.B[i] -= self.learning_rate * self.dB[i]
 
     def compute_loss(self, Y, Y_pred):
-        loss = np.sum(np.abs(Y-Y_pred)) / Y.shape[0]
+        m = len(Y)
+        loss = -np.sum(Y * np.log(Y_pred) / m)
         return loss
 
     def train(self, train_files, train_df, batch_size, num_epochs):
         for epoch in range(num_epochs):
-
+            losses = []
             np.random.shuffle(train_files)
 
             for i in range(0, len(train_files), batch_size):
@@ -74,10 +94,11 @@ class NN:
                 train_X_batch, train_Y_batch = preprocess_data(train_batch_files, train_df)
 
                 self.forward(train_X_batch.T)
-                loss = self.compute_loss(train_Y_batch, self.A2)
+                loss = self.compute_loss(train_Y_batch, self.Z[-1])
                 self.backward_propagation(train_X_batch, train_Y_batch)
-
-                print(f"Epoch: {epoch + 1}, Batch: {i // batch_size + 1}, Loss: {loss}")
+                self.update_parameters()
+                losses.append(loss)
+            print(f"Epoch: {epoch + 1}, Loss: {np.mean(losses)}")
 
     def test(self, test_files, test_df, batch_size):
 
@@ -89,10 +110,14 @@ class NN:
             train_X_batch, train_Y_batch = preprocess_data(train_batch_files, test_df)
 
             self.forward(train_X_batch.T)
-            loss = self.compute_loss(train_Y_batch, self.A2)
+            loss = self.compute_loss(train_Y_batch, self.Z[-1])
+            self.update_parameters()
             losses.append(loss)
 
         return np.mean(losses)
+
+    def sigmoid_derivative(self, Z):
+        return self.sigmoid(Z) * (1 - self.sigmoid(Z))
 
 
 if __name__ == '__main__':
@@ -108,5 +133,5 @@ if __name__ == '__main__':
     nn = NN()
 
     # Training and Validation
-    nn.train(train_files, train_df, batch_size=1000, num_epochs=10)
+    nn.train(train_files, train_df, batch_size=128, num_epochs=10)
     print(nn.test(test_files, test_df, batch_size=128))
