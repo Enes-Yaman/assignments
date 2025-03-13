@@ -227,9 +227,9 @@ def data_generator(image_filenames, boxes, batch_size, directory, width, height)
 
 
 def part3():
-    train_dir = 'C:/Users/enesyaman/Desktop/assignments/assignments/ain433/Assignment4/Raccoon.v2-raw.yolov4pytorch/train'
-    valid_dir = 'C:/Users/enesyaman/Desktop/assignments/assignments/ain433/Assignment4/Raccoon.v2-raw.yolov4pytorch/valid'
-    test_dir = 'C:/Users/enesyaman/Desktop/assignments/assignments/ain433/Assignment4/Raccoon.v2-raw.yolov4pytorch/test'
+    train_dir = '/assignments/Ain433 (Computer Vision)/Assignment4/Raccoon.v2-raw.yolov4pytorch/train'
+    valid_dir = '/assignments/Ain433 (Computer Vision)/Assignment4/Raccoon.v2-raw.yolov4pytorch/valid'
+    test_dir = '/assignments/Ain433 (Computer Vision)/Assignment4/Raccoon.v2-raw.yolov4pytorch/test'
 
     img_width, img_height = 256,256
     # Example usage
@@ -297,9 +297,9 @@ def part3_model(train_generator, val_generator, test_generator, steps_per_epoch,
 
 
 if __name__ == '__main__':
-    train_x, val_x, test_x, train_y, val_y, test_y = create_dataset('C:/Users/enesyaman/Desktop/assignments'
-                                                                    '/assignments/ain433/Assignment4/archive'
-                                                                    '/indoorCVPR_09/Images', 256)
+    train_x, val_x, test_x, train_y, val_y, test_y = create_dataset(
+        '/assignments/Ain433 (Computer Vision)/Assignment4/archive'
+        '/indoorCVPR_09/Images', 256)
     # part1(train_x, train_y, val_x, val_y, test_x, test_y)
     # part2(train_x, train_y, val_x, val_y, test_x, test_y)
     part3()
